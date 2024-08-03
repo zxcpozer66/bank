@@ -1,0 +1,27 @@
+{
+	"name": "projects",
+	"version": "1.0.0",
+	"scripts": {
+		"start": "concurrently \"npm run start:project\" \"npm run start:projectapi\"",
+		"start:project": "cd project && npm start",
+		"start:projectapi": "cd projectApi && npm start",
+		"build:project": "cd project && npm run build"
+	},
+	"dependencies": {
+		"@mui/icons-material": "^5.16.4",
+		"axios": "^1.7.2",
+		"concurrently": "^7.6.0",
+		"cors": "^2.8.5",
+		"express": "^4.19.2",
+		"http": "^0.0.1-security",
+		"moment": "^2.30.1",
+		"multer": "^1.4.5-lts.1",
+		"mysql2": "^3.11.0",
+		"socket.io": "^4.7.5",
+		"socket.io-client": "^4.7.5"
+	},
+	"devDependencies": {
+		"@types/node": "^20.14.11",
+		"typescript": "^5.5.4"
+	}
+}
