@@ -34,7 +34,7 @@ const Acc: FC<IProps> = ({
 }) => {
 	const navigate = useNavigate()
 	const [user, setUser] = useState<any>(null)
-	const [numberAcc, setNumberAcc] = useState<string>('')
+	const [numberAcc, setNumberAcc] = useState<string | ''>('')
 	const [loading, setLoading] = useState(false)
 	const [showWelcome, setShowWelcome] = useState(true)
 	const [transactions, setTransactions] = useState<any[]>([])
@@ -157,7 +157,6 @@ const Acc: FC<IProps> = ({
 
 	const handleAddAccount = async (balance: number) => {
 		try {
-			console.log('Передаваемые данные:', { userId, balance })
 			await axios.post('http://localhost:3001/api/addAccount', {
 				userId: userId,
 				balance: balance,

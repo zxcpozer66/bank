@@ -88,14 +88,34 @@ app.post('/api/avatars', upload.single('avatar'), (req, res) => {
 		return res.status(400).json({ error: 'Файл не загружен' })
 	}
 	const avatarUrl = `/uploads/${file.filename}`
-	const query =
-		'INSERT INTO avatars (user_id, avatar_path) VALUES (?, ?) ON DUPLICATE KEY UPDATE avatar_path = VALUES(avatar_path)'
-	connection.query(query, [userId, avatarUrl], err => {
+	const checkQuery = 'SELECT * FROM avatars WHERE user_id = ?'
+	connection.query(checkQuery, [userId], (err, results) => {
 		if (err) {
-			console.error('Ошибка при обновлении аватара:', err.stack)
-			return res.status(500).json({ error: 'Ошибка при обновлении аватара' })
+			console.error('Ошибка при проверке записи:', err.stack)
+			return res.status(500).json({ error: 'Ошибка при проверке записи' })
 		}
-		res.json({ avatarUrl })
+		if (results.length > 0) {
+			const updateQuery = 'UPDATE avatars SET avatar_path = ? WHERE user_id = ?'
+			connection.query(updateQuery, [avatarUrl, userId], err => {
+				if (err) {
+					console.error('Ошибка при обновлении аватара:', err.stack)
+					return res
+						.status(500)
+						.json({ error: 'Ошибка при обновлении аватара' })
+				}
+				res.status(200).json({ avatarUrl })
+			})
+		} else {
+			const insertQuery =
+				'INSERT INTO avatars (user_id, avatar_path) VALUES (?, ?)'
+			connection.query(insertQuery, [userId, avatarUrl], err => {
+				if (err) {
+					console.error('Ошибка при вставке аватара:', err.stack)
+					return res.status(500).json({ error: 'Ошибка при вставке аватара' })
+				}
+				res.status(201).json({ avatarUrl })
+			})
+		}
 	})
 })
 
@@ -109,11 +129,15 @@ app.get('/api/avatars', (req, res) => {
 
 	const query = 'SELECT avatar_path FROM avatars WHERE user_id = ?'
 	connection.query(query, [user_id], (err, results) => {
-		if (err || results.length === 0) {
-			return res.status(404).json({ message: 'Avatar not found' })
+		if (err) {
+			return res.status(500).json({ message: 'Ошибка запроса аватарка' })
 		}
-		const filePath = results[0].avatar_path
-		res.json({ avatar_path: filePath })
+		if (results.length > 0 && results[0].avatar_path) {
+			const filePath = results[0].avatar_path
+			return res.status(200).json({ avatar_path: filePath })
+		} else {
+			return res.status(200).json({ avatar_path: '' })
+		}
 	})
 })
 
@@ -225,11 +249,7 @@ app.get('/api/transactions', (req, res) => {
 			console.error('Ошибка выполнения запроса:', err.stack)
 			return res.status(500).json({ error: 'Ошибка выполнения запроса' })
 		}
-		if (results.length > 0) {
-			res.status(200).json(results)
-		} else {
-			res.status(404).json({ error: 'Транзакции не найдены' })
-		}
+		res.status(200).json(results)
 	})
 })
 
@@ -265,7 +285,7 @@ app.get('/api/cards', (req, res) => {
 				date_issued: card.date_issued,
 			})
 		} else {
-			res.status(404).json({ error: 'Карта пользователя не найдена' })
+			res.status(200).json([])
 		}
 	})
 })
@@ -333,15 +353,38 @@ app.get('/api/accounts', (req, res) => {
 				date_opened: accounts.date_opened,
 			})
 		} else {
-			res.status(404).json({ error: 'Аккаунт пользователя не найден' })
+			res.status(200).json([])
 		}
 	})
 })
-app.post('/api/passports', (req, res) => {
-	console.log('Запрос на обновление паспорта', req.body)
+
+app.post('/api/passports/create', (req, res) => {
+	const { user_id, passport_number, issue_date, expiry_date, country } =
+		req.body
+	if (!user_id || !passport_number || !issue_date || !expiry_date || !country) {
+		return res.status(400).json({ error: 'Не заполенены поля' })
+	}
+	const sql =
+		'INSERT INTO passports (user_id, passport_number, issue_date, expiry_date, country) VALUES (?, ?, ?, ?, ?)'
+	connection.query(
+		sql,
+		[user_id, passport_number, issue_date, expiry_date, country],
+		(err, results) => {
+			if (err) {
+				console.error('Ошибка создания паспорта ', err.stack)
+				return res.status(500).json({ message: 'Ошибка создания паспорта ' })
+			}
+			res.status(201).json({
+				message: 'Паспорт создан успешно',
+				passport_id: results.insertId,
+			})
+		}
+	)
+})
+
+app.post('/api/passports/update', (req, res) => {
 	const { passport_id, passport_number, issue_date, expiry_date, country } =
 		req.body
-
 	if (
 		!passport_id ||
 		!passport_number ||
@@ -351,7 +394,6 @@ app.post('/api/passports', (req, res) => {
 	) {
 		return res.status(400).json({ error: 'Все поля должны быть заполнены' })
 	}
-
 	const sql =
 		'UPDATE passports SET passport_number = ?, issue_date = ?, expiry_date = ?, country = ? WHERE passport_id = ?'
 	connection.query(
@@ -362,12 +404,8 @@ app.post('/api/passports', (req, res) => {
 				console.error('Ошибка обновления паспорта', err.stack)
 				return res.status(500).json({ error: 'Ошибка обновления паспорта' })
 			}
-			console.log('Результаты обновления паспорта', results)
-			if (results.affectedRows > 0) {
-				res.status(200).json({ message: 'Данные паспорта обновлены' })
-			} else {
-				res.status(404).json({ error: 'Не найден паспорт' })
-			}
+
+			res.status(200).json({ message: 'Данные паспорта обновлены' })
 		}
 	)
 })
@@ -391,7 +429,7 @@ app.get('/api/passports', (req, res) => {
 				country: passport.country,
 			})
 		} else {
-			res.status(404).json({ error: 'Не найден паспорт пользователя' })
+			res.status(200).json([])
 		}
 	})
 })
@@ -611,8 +649,7 @@ app.post('/api/register', (req, res) => {
 })
 
 app.post('/api/addTransaction', (req, res) => {
-	const { transaction_date, amount, from_account_id, to_account_id, user_id } =
-		req.body
+	const { transaction_date, amount, to_phone, user_id } = req.body
 
 	connection.beginTransaction(err => {
 		if (err) {
@@ -620,91 +657,150 @@ app.post('/api/addTransaction', (req, res) => {
 			return res.status(500).json({ error: 'Ошибка начала транзакции' })
 		}
 
-		const checkBalanceSql = 'SELECT balance FROM accounts WHERE account_id = ?'
-		connection.query(checkBalanceSql, [from_account_id], (err, results) => {
+		// Находим account_id отправителя по user_id
+		const getFromAccountIdSql =
+			'SELECT account_id FROM accounts WHERE user_id = ?'
+		connection.query(getFromAccountIdSql, [user_id], (err, results) => {
 			if (err) {
 				return connection.rollback(() => {
-					console.error('Ошибка проверки баланса:', err.stack)
-					res.status(500).json({ error: 'Ошибка проверки баланса' })
+					console.error('Ошибка получения account_id отправителя:', err.stack)
+					res
+						.status(500)
+						.json({ error: 'Ошибка получения account_id отправителя' })
 				})
 			}
-			if (results.length === 0 || results[0].balance < amount) {
+			if (results.length === 0) {
 				return connection.rollback(() => {
-					res
-						.status(400)
-						.json({ error: 'Недостаточно средств на счету отправителя' })
+					res.status(400).json({ error: 'Отправитель не найден' })
 				})
 			}
 
-			const insertTransactionSql =
-				'INSERT INTO transactions (transaction_date, amount, from_account_id, to_account_id, user_id) VALUES (?, ?, ?, ?, ?)'
-			connection.query(
-				insertTransactionSql,
-				[transaction_date, amount, from_account_id, to_account_id, user_id],
-				(err, results) => {
+			const from_account_id = results[0].account_id
+
+			// Находим account_id получателя по номеру телефона
+			const getToAccountIdSql =
+				'SELECT account_id FROM accounts WHERE phone = ?'
+			connection.query(getToAccountIdSql, [to_phone], (err, results) => {
+				if (err) {
+					return connection.rollback(() => {
+						console.error('Ошибка получения account_id получателя:', err.stack)
+						res
+							.status(500)
+							.json({ error: 'Ошибка получения account_id получателя' })
+					})
+				}
+				if (results.length === 0) {
+					return connection.rollback(() => {
+						res
+							.status(400)
+							.json({ error: 'Номер телефона получателя не найден' })
+					})
+				}
+
+				const to_account_id = results[0].account_id
+
+				// Проверяем баланс отправителя
+				const checkBalanceSql =
+					'SELECT balance FROM accounts WHERE account_id = ?'
+				connection.query(checkBalanceSql, [from_account_id], (err, results) => {
 					if (err) {
 						return connection.rollback(() => {
-							console.error('Ошибка добавления транзакции:', err.stack)
-							res.status(500).json({ error: 'Ошибка добавления транзакции' })
+							console.error('Ошибка проверки баланса:', err.stack)
+							res.status(500).json({ error: 'Ошибка проверки баланса' })
+						})
+					}
+					if (results.length === 0 || results[0].balance < amount) {
+						return connection.rollback(() => {
+							res
+								.status(400)
+								.json({ error: 'Недостаточно средств на счету отправителя' })
 						})
 					}
 
-					const updateFromAccountSql =
-						'UPDATE accounts SET balance = balance - ? WHERE account_id = ?'
+					// Вставляем транзакцию
+					const insertTransactionSql =
+						'INSERT INTO transactions (transaction_date, amount, from_account_id, to_account_id, user_id) VALUES (?, ?, ?, ?, ?)'
 					connection.query(
-						updateFromAccountSql,
-						[amount, from_account_id],
-						err => {
+						insertTransactionSql,
+						[transaction_date, amount, from_account_id, to_account_id, user_id],
+						(err, results) => {
 							if (err) {
 								return connection.rollback(() => {
-									console.error(
-										'Ошибка обновления баланса отправителя:',
-										err.stack
-									)
+									console.error('Ошибка добавления транзакции:', err.stack)
 									res
 										.status(500)
-										.json({ error: 'Ошибка обновления баланса отправителя' })
+										.json({ error: 'Ошибка добавления транзакции' })
 								})
 							}
 
-							const updateToAccountSql =
-								'UPDATE accounts SET balance = balance + ? WHERE account_id = ?'
+							// Обновляем баланс отправителя
+							const updateFromAccountSql =
+								'UPDATE accounts SET balance = balance - ? WHERE account_id = ?'
 							connection.query(
-								updateToAccountSql,
-								[amount, to_account_id],
+								updateFromAccountSql,
+								[amount, from_account_id],
 								err => {
 									if (err) {
 										return connection.rollback(() => {
 											console.error(
-												'Ошибка обновления баланса получателя:',
+												'Ошибка обновления баланса отправителя:',
 												err.stack
 											)
 											res
 												.status(500)
-												.json({ error: 'Ошибка обновления баланса получателя' })
+												.json({
+													error: 'Ошибка обновления баланса отправителя',
+												})
 										})
 									}
 
-									connection.commit(err => {
-										if (err) {
-											return connection.rollback(() => {
-												console.error('Ошибка фиксации транзакции:', err.stack)
-												res
-													.status(500)
-													.json({ error: 'Ошибка фиксации транзакции' })
+									// Обновляем баланс получателя
+									const updateToAccountSql =
+										'UPDATE accounts SET balance = balance + ? WHERE account_id = ?'
+									connection.query(
+										updateToAccountSql,
+										[amount, to_account_id],
+										err => {
+											if (err) {
+												return connection.rollback(() => {
+													console.error(
+														'Ошибка обновления баланса получателя:',
+														err.stack
+													)
+													res
+														.status(500)
+														.json({
+															error: 'Ошибка обновления баланса получателя',
+														})
+												})
+											}
+
+											// Фиксируем транзакцию
+											connection.commit(err => {
+												if (err) {
+													return connection.rollback(() => {
+														console.error(
+															'Ошибка фиксации транзакции:',
+															err.stack
+														)
+														res
+															.status(500)
+															.json({ error: 'Ошибка фиксации транзакции' })
+													})
+												}
+												res.status(201).json({
+													message: 'Транзакция добавлена и балансы обновлены',
+													transaction_id: results.insertId,
+												})
 											})
 										}
-										res.status(201).json({
-											message: 'Транзакция добавлена и балансы обновлены',
-											transaction_id: results.insertId,
-										})
-									})
+									)
 								}
 							)
 						}
 					)
-				}
-			)
+				})
+			})
 		})
 	})
 })

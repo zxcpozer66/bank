@@ -1,4 +1,4 @@
-import { Dispatch, FC, SetStateAction, useState } from 'react'
+import { Dispatch, FC, SetStateAction, useEffect, useState } from 'react'
 import tf from '../../img/tf.jpg'
 
 interface IProps {
@@ -10,7 +10,10 @@ interface IProps {
 	setBalance: Dispatch<SetStateAction<number>>
 }
 
-export const Bank: FC<IProps> = ({ numberAcc, balance }) => {
+export const Bank: FC<IProps> = ({ numberAcc, balance, setNumberAcc }) => {
+	useEffect(() => {
+		setNumberAcc(numberAcc)
+	})
 	const [showForm, setShowForm] = useState(false)
 
 	return (

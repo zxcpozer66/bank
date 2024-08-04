@@ -12,7 +12,7 @@ interface IProps {
 const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 	const [transactionDate, setTransactionDate] = useState<string>('')
 	const [amount, setAmount] = useState<number>(0)
-	const [toAccountId, setToAccountId] = useState<string>('')
+	const [toPhone, setToPhone] = useState<string>('') // Номер телефона получателя
 
 	useEffect(() => {
 		const today = new Date().toISOString().split('T')[0]
@@ -25,15 +25,14 @@ const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 			await axios.post('http://localhost:3001/api/addTransaction', {
 				transaction_date: transactionDate,
 				amount: Number(amount),
-				from_account_id: userId,
-				to_account_id: toAccountId,
+				to_phone: toPhone, // Номер телефона получателя
 				user_id: userId,
 			})
 			onAddTransaction()
 			onClose()
 			setTransactionDate('')
 			setAmount(0)
-			setToAccountId('')
+			setToPhone('')
 		} catch (error) {
 			console.error('Ошибка при добавлении транзакции', error)
 		}
@@ -58,11 +57,11 @@ const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 			</label>
 
 			<label className='block mb-4'>
-				<span className='text-gray-700'>Кому:</span>
+				<span className='text-gray-700'>Кому (номер телефона):</span>
 				<input
 					type='text'
-					value={toAccountId}
-					onChange={e => setToAccountId(e.target.value)}
+					value={toPhone}
+					onChange={e => setToPhone(e.target.value)}
 					className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50'
 					required
 				/>
