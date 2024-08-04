@@ -82,7 +82,7 @@ const HeaderHome: FC = () => {
 					element={<CardAdd numberAcc={numberAcc} />}
 				></Route>
 				<Route
-					path='/cardadd'
+					path='/register'
 					element={
 						<PrivateRoute auth={auth}>
 							<CardAdd numberAcc={numberAcc} />

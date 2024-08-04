@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ChangeEvent, FC, FormEvent, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface IProps {
 	numberAcc: string
@@ -7,6 +8,7 @@ interface IProps {
 
 const CardAdd: FC<IProps> = ({}) => {
 	const [numberAcc, serNumberAcc] = useState<string>('')
+	const navigator = useNavigate()
 	const [formData, setFormData] = useState({
 		phoneNumber: '',
 		userName: '',
@@ -57,6 +59,7 @@ const CardAdd: FC<IProps> = ({}) => {
 
 			setError(null)
 			alert('Регистрация успешна')
+			navigator('/login')
 		} catch (error) {
 			console.error('Ошибка при регистрации:', error)
 			setError('Ошибка при регистрации')
