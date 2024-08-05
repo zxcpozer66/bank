@@ -649,7 +649,7 @@ app.post('/api/register', (req, res) => {
 })
 
 app.post('/api/addTransaction', (req, res) => {
-	const { transaction_date, amount, to_phone, user_id } = req.body
+	const { transaction_date, amount, to_phone, to_card, user_id } = req.body
 
 	connection.beginTransaction(err => {
 		if (err) {
@@ -657,7 +657,6 @@ app.post('/api/addTransaction', (req, res) => {
 			return res.status(500).json({ error: 'Ошибка начала транзакции' })
 		}
 
-		// Находим account_id отправителя по user_id
 		const getFromAccountIdSql =
 			'SELECT account_id FROM accounts WHERE user_id = ?'
 		connection.query(getFromAccountIdSql, [user_id], (err, results) => {
@@ -674,13 +673,14 @@ app.post('/api/addTransaction', (req, res) => {
 					res.status(400).json({ error: 'Отправитель не найден' })
 				})
 			}
-
 			const from_account_id = results[0].account_id
 
-			// Находим account_id получателя по номеру телефона
-			const getToAccountIdSql =
-				'SELECT account_id FROM accounts WHERE phone = ?'
-			connection.query(getToAccountIdSql, [to_phone], (err, results) => {
+			const getToAccountIdSql = to_phone
+				? 'SELECT accounts.account_id FROM accounts JOIN users ON accounts.user_id = users.id WHERE users.phone = ?'
+				: 'SELECT accounts.account_id FROM accounts JOIN cards ON accounts.user_id = cards.user_id WHERE cards.card_number = ? AND cards.status = "active"'
+
+			const toParam = to_phone ? to_phone : to_card
+			connection.query(getToAccountIdSql, [toParam], (err, results) => {
 				if (err) {
 					return connection.rollback(() => {
 						console.error('Ошибка получения account_id получателя:', err.stack)
@@ -691,15 +691,15 @@ app.post('/api/addTransaction', (req, res) => {
 				}
 				if (results.length === 0) {
 					return connection.rollback(() => {
-						res
-							.status(400)
-							.json({ error: 'Номер телефона получателя не найден' })
+						res.status(400).json({
+							error: to_phone
+								? 'Номер телефона получателя не найден'
+								: 'Номер карты получателя не найден',
+						})
 					})
 				}
-
 				const to_account_id = results[0].account_id
 
-				// Проверяем баланс отправителя
 				const checkBalanceSql =
 					'SELECT balance FROM accounts WHERE account_id = ?'
 				connection.query(checkBalanceSql, [from_account_id], (err, results) => {
@@ -717,9 +717,10 @@ app.post('/api/addTransaction', (req, res) => {
 						})
 					}
 
-					// Вставляем транзакцию
-					const insertTransactionSql =
-						'INSERT INTO transactions (transaction_date, amount, from_account_id, to_account_id, user_id) VALUES (?, ?, ?, ?, ?)'
+					const insertTransactionSql = `
+			  INSERT INTO transactions 
+			  (transaction_date, amount, from_account_id, to_account_id, user_id) 
+			  VALUES (?, ?, ?, ?, ?)`
 					connection.query(
 						insertTransactionSql,
 						[transaction_date, amount, from_account_id, to_account_id, user_id],
@@ -733,7 +734,6 @@ app.post('/api/addTransaction', (req, res) => {
 								})
 							}
 
-							// Обновляем баланс отправителя
 							const updateFromAccountSql =
 								'UPDATE accounts SET balance = balance - ? WHERE account_id = ?'
 							connection.query(
@@ -746,15 +746,11 @@ app.post('/api/addTransaction', (req, res) => {
 												'Ошибка обновления баланса отправителя:',
 												err.stack
 											)
-											res
-												.status(500)
-												.json({
-													error: 'Ошибка обновления баланса отправителя',
-												})
+											res.status(500).json({
+												error: 'Ошибка обновления баланса отправителя',
+											})
 										})
 									}
-
-									// Обновляем баланс получателя
 									const updateToAccountSql =
 										'UPDATE accounts SET balance = balance + ? WHERE account_id = ?'
 									connection.query(
@@ -767,15 +763,12 @@ app.post('/api/addTransaction', (req, res) => {
 														'Ошибка обновления баланса получателя:',
 														err.stack
 													)
-													res
-														.status(500)
-														.json({
-															error: 'Ошибка обновления баланса получателя',
-														})
+													res.status(500).json({
+														error: 'Ошибка обновления баланса получателя',
+													})
 												})
 											}
 
-											// Фиксируем транзакцию
 											connection.commit(err => {
 												if (err) {
 													return connection.rollback(() => {
@@ -788,6 +781,7 @@ app.post('/api/addTransaction', (req, res) => {
 															.json({ error: 'Ошибка фиксации транзакции' })
 													})
 												}
+
 												res.status(201).json({
 													message: 'Транзакция добавлена и балансы обновлены',
 													transaction_id: results.insertId,

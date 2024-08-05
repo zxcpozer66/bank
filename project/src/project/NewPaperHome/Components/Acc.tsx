@@ -22,7 +22,6 @@ interface IProps {
 }
 
 const Acc: FC<IProps> = ({
-	username,
 	phone,
 	auth,
 	setAuth,
@@ -115,13 +114,19 @@ const Acc: FC<IProps> = ({
 			return () => clearTimeout(timer)
 		}
 	}, [fullName])
-
-	const handleAddInvest = async () => {
+	const fetchDeposits = async () => {
 		try {
 			const response = await axios.get('http://localhost:3001/api/deposits', {
 				params: { user_id: userId },
 			})
-			setInvest(response.data || [])
+			setDeposits(response.data || [])
+		} catch (error) {
+			console.log('Ошибка при получении вкладов', error)
+		}
+	}
+	const handleAddInvest = async () => {
+		try {
+			await fetchDeposits()
 			const balanceResponse = await axios.get(
 				'http://localhost:3001/api/accounts',
 				{
@@ -234,7 +239,7 @@ const Acc: FC<IProps> = ({
 					<hr />
 					<div className='flex flex-col gap-4 items-center'>
 						{numberAcc ? (
-							<div className=' flex p-4'>
+							<div className=' flex p-4 gap-9'>
 								<DataCard user={user} fullName={fullName} phone={phone} />
 								<Bank
 									balance={balance}
@@ -287,6 +292,7 @@ const Acc: FC<IProps> = ({
 										deposits={deposits}
 										setDeposits={setDeposits}
 										setBalance={setBalance}
+										fetchDeposits={fetchDeposits}
 									/>
 								) : (
 									<div className='text-center'>
@@ -311,8 +317,6 @@ const Acc: FC<IProps> = ({
 												userId={userId || ''}
 												onAddTransaction={handleAddTransaction}
 												onClose={() => setShowModal(false)}
-												onDeposit={handleDeposit}
-												onWithdraw={handleWithdraw}
 											/>
 										</div>
 									</div>

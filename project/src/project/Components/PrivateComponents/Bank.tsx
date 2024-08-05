@@ -43,7 +43,7 @@ export const Bank: FC<IProps> = ({ numberAcc, balance, setNumberAcc }) => {
 					</div>
 				</div>
 			) : (
-				<p className='p-4'>Вы скрыли данные</p>
+				''
 			)}
 		</div>
 	)

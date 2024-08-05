@@ -1,5 +1,6 @@
 import axios from 'axios'
-import { Dispatch, FC, SetStateAction } from 'react'
+import moment from 'moment'
+import { Dispatch, FC, SetStateAction, useEffect } from 'react'
 
 interface Deposits {
 	deposit_id: string
@@ -17,6 +18,7 @@ interface InvestProps {
 	setDeposits: Dispatch<SetStateAction<Deposits[]>>
 	setBalance: Dispatch<SetStateAction<number>>
 	userId: string | null
+	fetchDeposits: () => void
 }
 
 const Invest: FC<InvestProps> = ({
@@ -50,7 +52,7 @@ const Invest: FC<InvestProps> = ({
 	if (deposits.length === 0) {
 		return <p>У вас отсутствуют вклады</p>
 	}
-
+	useEffect(() => {})
 	return (
 		<div className='bg-white p-6 rounded-lg shadow-md border-2'>
 			<ul>
@@ -81,7 +83,7 @@ const Invest: FC<InvestProps> = ({
 							</p>
 							<p>
 								<strong>Дата создания:</strong>{' '}
-								{new Date(deposit.date_created).toLocaleDateString()}
+								{moment(new Date()).format('DD.MM.YYYY')}
 							</p>
 							<button
 								className='p-2 shadow-slate-900 m-2 bg-[#080e41] text-white rounded-xl hover:bg-[#060b35]'

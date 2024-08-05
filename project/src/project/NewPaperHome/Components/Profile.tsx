@@ -1,6 +1,7 @@
 import axios from 'axios'
 import moment from 'moment'
 import { FC, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import StyledInput from './StyledInput'
 import AvatarUpload from './Upload'
 
@@ -137,7 +138,7 @@ const Profile: FC<IProps> = ({ userId }) => {
 			console.log('Ошибка при создании нового паспорта', error)
 		}
 	}
-
+	const navigator = useNavigate()
 	const handleAvatar = async (file: File) => {
 		const formData = new FormData()
 		formData.append('avatar', file)
@@ -160,7 +161,21 @@ const Profile: FC<IProps> = ({ userId }) => {
 
 	return (
 		<div className='container mx-auto p-4'>
-			<h2 className='text-center text-3xl font-bold mb-4'>Профиль</h2>
+			<div className='flex flex-col'>
+				<div className='self-start'>
+					<button
+						className='p-2 shadow-slate-900 m-2 bg-[#080e41] text-white rounded-xl hover:bg-[#060b35]'
+						onClick={() => {
+							navigator(-1)
+						}}
+					>
+						Вернуться
+					</button>
+				</div>
+
+				<h2 className='text-center text-3xl font-bold mb-4 mt-4'>Профиль</h2>
+			</div>
+
 			<div className='flex flex-col gap-4 items-center'>
 				<div className='space-y-4'>
 					<AvatarUpload onUpload={handleAvatar} avatarUrl={avatarUrl} />

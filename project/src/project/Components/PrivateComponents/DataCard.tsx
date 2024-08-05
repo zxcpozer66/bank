@@ -22,41 +22,32 @@ export const DataCard: FC<IProps> = ({ phone, fullName, user }) => {
 	}
 
 	return (
-		<div className='flex'>
-			<div className='flex flex-col'>
+		<div className='flex flex-col items-center '>
+			{showForm ? (
+				<div className='m-2 p-5 border-2 rounded-lg shadow-lg'>
+					<p className='text-2xl text-gray-700 mb-4'>Ваши данные:</p>
+					<h3>Имя: {fullName}</h3>
+					<h3>Номер: {phone}</h3>
+					<h3>Адрес: {user.address}</h3>
+					<h3>Почта: {user.email}</h3>
+					<h3>
+						Дата регистрации:{' '}
+						{moment(user.date_registered).format('DD.MM.YYYY')}
+					</h3>
+				</div>
+			) : (
 				<img
 					src={card}
 					alt='Карта'
-					className='h-64 w-96 object-cover rounded-md'
+					className='h-64 w-96 object-cover rounded-md mb-4'
 				/>
-				<button
-					className='p-2 m-2 bg-[#2e43ff] text-white rounded-xl hover:bg-[#44d3ff]'
-					onClick={() => setShowForm(!showForm)}
-				>
-					{showForm ? <p>Скрыть</p> : <p>Данные владельца</p>}
-				</button>
-			</div>
-			{showForm ? (
-				<div className='m-9 flex gap-7'>
-					<div>
-						<div className='flex flex-col'>
-							<p className='text-2xl text-gray-700'>Ваши данные:</p>
-							<div className='flex flex-col border-2 p-5 rounded-lg shadow-lg'>
-								<h3>Имя: {fullName}</h3>
-								<h3>Номер: {phone}</h3>
-								<h3>Адрес: {user.address}</h3>
-								<h3>Почта: {user.email}</h3>
-								<h3>
-									Дата регистрации:{' '}
-									{moment(user.date_registered).format('DD.MM.YYYY')}
-								</h3>
-							</div>
-						</div>
-					</div>
-				</div>
-			) : (
-				<p className='p-4'>Вы скрыли данные</p>
 			)}
+			<button
+				className='p-2 m-2 bg-[#2e43ff] text-white rounded-xl hover:bg-[#44d3ff]'
+				onClick={() => setShowForm(!showForm)}
+			>
+				{showForm ? <p>Скрыть</p> : <p>Данные владельца</p>}
+			</button>
 		</div>
 	)
 }

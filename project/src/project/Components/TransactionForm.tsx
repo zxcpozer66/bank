@@ -5,14 +5,14 @@ interface IProps {
 	userId: string
 	onAddTransaction: () => void
 	onClose: () => void
-	onDeposit: (amount: number) => void
-	onWithdraw: (amount: number) => void
 }
 
 const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 	const [transactionDate, setTransactionDate] = useState<string>('')
 	const [amount, setAmount] = useState<number>(0)
-	const [toPhone, setToPhone] = useState<string>('') // Номер телефона получателя
+	const [toPhone, setToPhone] = useState<string>('')
+	const [cardNumber, setCardNumber] = useState<string>('')
+	const [pay, setPay] = useState<boolean>(true)
 
 	useEffect(() => {
 		const today = new Date().toISOString().split('T')[0]
@@ -25,7 +25,8 @@ const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 			await axios.post('http://localhost:3001/api/addTransaction', {
 				transaction_date: transactionDate,
 				amount: Number(amount),
-				to_phone: toPhone, // Номер телефона получателя
+				to_phone: pay ? toPhone : null,
+				to_card: pay ? null : cardNumber,
 				user_id: userId,
 			})
 			onAddTransaction()
@@ -33,8 +34,11 @@ const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 			setTransactionDate('')
 			setAmount(0)
 			setToPhone('')
+			setCardNumber('')
+			alert('Перевод успешен')
 		} catch (error) {
 			console.error('Ошибка при добавлении транзакции', error)
+			alert('Вы указали неверные данные для перевода')
 		}
 	}
 
@@ -44,7 +48,13 @@ const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 			className='p-6 border rounded-lg shadow-md bg-white'
 		>
 			<h3 className='text-2xl font-semibold mb-4'>Добавить транзакцию</h3>
-
+			<button
+				type='button'
+				className='py-2 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500'
+				onClick={() => setPay(!pay)}
+			>
+				{pay ? 'Номер телефона' : 'Номер карты'}
+			</button>
 			<label className='block mb-2'>
 				<span className='text-gray-700'>Сумма:</span>
 				<input
@@ -55,17 +65,29 @@ const TransactionForm: FC<IProps> = ({ userId, onAddTransaction, onClose }) => {
 					required
 				/>
 			</label>
-
-			<label className='block mb-4'>
-				<span className='text-gray-700'>Кому (номер телефона):</span>
-				<input
-					type='text'
-					value={toPhone}
-					onChange={e => setToPhone(e.target.value)}
-					className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50'
-					required
-				/>
-			</label>
+			{pay ? (
+				<label className='block mb-4'>
+					<span className='text-gray-700'>Кому (номер телефона):</span>
+					<input
+						type='text'
+						value={toPhone}
+						onChange={e => setToPhone(e.target.value)}
+						className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50'
+						required
+					/>
+				</label>
+			) : (
+				<label className='block mb-4'>
+					<span className='text-gray-700'>Кому (номер карты):</span>
+					<input
+						type='text'
+						value={cardNumber}
+						onChange={e => setCardNumber(e.target.value)}
+						className='mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50'
+						required
+					/>
+				</label>
+			)}
 
 			<div className='flex justify-end space-x-4'>
 				<button
